@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A book uploaded by an admin. The source PDF lives in S3 at `sourceKey`.
+model Book {
+  id            String    @id @default(cuid())
+  title         String
+  author        String?
+  description   String?
+  language      String    @default("en-IN")
+  sourceKey     String
+  sourceType    String    @default("pdf")
+  coverKey      String?
+  pageCount     Int       @default(0)
+  chapterCount  Int       @default(0)
+  wordCount     Int       @default(0)
+  /// uploaded | processing | ready | failed
+  status        String    @default("uploaded")
+  statusMessage String?
+  processedPages Int      @default(0)
+  /// Default reader mode when opening this book (hinglish | hindi)
+  simplifyStyle String    @default("hinglish")
+  defaultSpeaker String   @default("shubh")
+  enabled       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  chapters Chapter[]
+  pages    Page[]
+  segments Segment[]
+
+  @@index([enabled, status])
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  index     Int
+  title     String
+  startPage Int
+  endPage   Int
+  createdAt DateTime @default(now())
+
+  @@unique([bookId, index])
+  @@index([bookId])
+}
+
+model Page {
+  id        String @id @default(cuid())
+  bookId    String
+  book      Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  number    Int
+  text      String
+  charCount Int    @default(0)
+
+  @@unique([bookId, number])
+  @@index([bookId, number])
+}
+
+/// A TTS-sized slice of a page. This is the unit the reader plays.
+model Segment {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  /// Order across the whole book (0-based)
+  index        Int
+  pageNumber   Int
+  /// Order within its page (0-based)
+  pageIndex    Int
+  sourceText   String
+  /// Result of the sarvam-105b simplification pass, cached forever
+  hinglishText String?
+  /// English loanword -> short Hindi meaning (hinglish mode only), for tap-to-learn UI
+  hinglishGlosses Json?
+  /// Pure Hindi rewrite (no English loanwords)
+  hindiText      String?
+  /// pending | ready | failed
+  status       String   @default("pending")
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  audios Audio[]
+
+  @@unique([bookId, index])
+  @@index([bookId, pageNumber])
+}
+
+/// Rendered audio for one segment in one voice, cached in S3.
+model Audio {
+  id         String   @id @default(cuid())
+  segmentId  String
+  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  speaker      String
+  /// hinglish | hindi — separate cached audio per mode
+  readingMode  String   @default("hinglish")
+  s3Key        String
+  bytes      Int      @default(0)
+  sampleRate Int      @default(24000)
+  createdAt  DateTime @default(now())
+
+  @@unique([segmentId, speaker, readingMode])
+  @@index([segmentId])
+}

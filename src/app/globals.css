@@ -1,0 +1,339 @@
+:root {
+  --app-max-width: 560px;
+  --reader-player-h: 168px;
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --ink: #1b1a19;
+  --muted: #6b6560;
+  --accent: #b4531a;
+  --accent-soft: #fdf1e7;
+  --border: #e7e2dc;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-app, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Mobile-first shell: a phone-width column, centred on larger screens. */
+.app-shell {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  padding: 16px 16px 96px;
+}
+
+/* Reader: leave room for the fixed playback bar + home-indicator safe area */
+.app-main--with-player {
+  padding-bottom: calc(var(--reader-player-h) + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(var(--reader-player-h) + env(safe-area-inset-bottom));
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(247, 245, 242, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+}
+
+.app-header h1 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header .sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 24px 0 8px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.book-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: transform 0.12s ease;
+}
+
+.book-card:active {
+  transform: scale(0.99);
+}
+
+.book-cover {
+  width: 44px;
+  height: 58px;
+  border-radius: 6px;
+  background: linear-gradient(140deg, var(--accent), #7d3a12);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.book-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 2px;
+}
+
+.book-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Reader */
+.reader-text {
+  font-size: 19px;
+  line-height: 1.75;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  min-height: 180px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reader-text.hinglish {
+  font-size: 20px;
+  line-height: 1.9;
+}
+
+.reader-text.hindi-only {
+  font-size: 20px;
+  line-height: 1.9;
+}
+
+.hinglish-en-word {
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 4px;
+  background: none;
+  border: none;
+  padding: 0 1px;
+  margin: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hinglish-en-word.is-active {
+  background: var(--accent-soft);
+  border-radius: 4px;
+}
+
+.hinglish-hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.gloss-card {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--reader-player-h) + 12px + env(safe-area-inset-bottom));
+  z-index: 25;
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gloss-card-word {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: lowercase;
+}
+
+.gloss-card-meaning {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.gloss-card-close {
+  align-self: flex-end;
+  margin-top: 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.reader-source {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--muted);
+  border-left: 3px solid var(--border);
+  padding-left: 12px;
+  margin-top: 14px;
+  white-space: pre-wrap;
+}
+
+.player-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+}
+
+.player-inner {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.play-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.play-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.progress-line {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    box-shadow: 0 0 0 1px var(--border);
+  }
+}
+
+/* The admin console is a desktop tool — let it use the full width. */
+.admin-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
