@@ -67,9 +67,19 @@ The IAM user needs `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`,
 ## 4. Deploying to Vercel
 
 1. Push the repo to GitHub and import it in Vercel.
-2. Add every variable from `.env.example` in **Settings → Environment Variables**.
-3. Add the Vercel domain to the S3 CORS `AllowedOrigins`.
-4. Deploy. `npm run build` runs `prisma generate` first, so the client is always in sync.
+2. **Environment variables (required)** — copy from your local `.env` after `neon env pull` / `neon deploy`:
+   - `DATABASE_URL` (Neon **pooled** URL) — without this, `/api/books` returns 500/503
+   - `SARVAM_API_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`
+   - Neon Object Storage: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_S3_BUCKET=books`
+3. **Production schema** — once `DATABASE_URL` is set on Vercel, apply the schema to that same Neon branch (from your machine):
+
+   ```bash
+   DATABASE_URL="postgresql://…" npx prisma db push
+   ```
+
+4. Redeploy. `npm run build` runs `prisma generate` so the client matches `schema.prisma`.
+
+If the library shows an error JSON mentioning `DATABASE_URL` or schema, fix step 2 or 3 above.
 
 On the **Hobby** plan serverless functions stop at 60 s. Ingestion is already
 batched around that (15 pages per request), but if you move to Pro you can raise
