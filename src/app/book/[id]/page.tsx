@@ -13,6 +13,7 @@ import {
   readingModeStorageKey,
   type ReadingMode,
 } from "@/lib/reading-mode";
+import { ContinueReadingCard } from "@/components/ContinueReadingCard";
 import type { BookDto, ChapterDto } from "@/lib/types";
 
 export default function BookPage({ params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +82,8 @@ export default function BookPage({ params }: { params: Promise<{ id: string }> }
 
             {book && (
               <>
+                <ContinueReadingCard bookId={id} />
+
                 <div
                   style={{
                     background: "var(--accent-soft)",
@@ -89,6 +92,7 @@ export default function BookPage({ params }: { params: Promise<{ id: string }> }
                     padding: 14,
                     fontSize: 14,
                     lineHeight: 1.6,
+                    marginTop: 16,
                   }}
                 >
                   {bothModesAvailableDescription()}
@@ -112,7 +116,7 @@ export default function BookPage({ params }: { params: Promise<{ id: string }> }
                 </p>
 
                 <p className="section-title" style={{ marginTop: 20 }}>
-                  कहाँ से शुरू करें?
+                  या नया स्थान चुनें
                 </p>
 
             <Segmented

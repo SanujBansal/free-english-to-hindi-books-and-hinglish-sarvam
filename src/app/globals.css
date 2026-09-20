@@ -325,6 +325,21 @@ a {
   display: none;
 }
 
+.continue-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(180, 83, 26, 0.08);
+}
+
+.continue-card-title {
+  margin: 6px 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 @media (min-width: 768px) {
   .app-shell {
     box-shadow: 0 0 0 1px var(--border);

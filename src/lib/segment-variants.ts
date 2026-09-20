@@ -22,7 +22,8 @@ export async function ensureSegmentVariants(
   let hindiText = segment.hindiText ?? "";
   let glosses = parseGlosses(segment.hinglishGlosses);
 
-  const needsHinglish = !hinglishText || Object.keys(glosses).length === 0;
+  // Only call Sarvam when rewrite text is missing — not when glosses are empty (avoids repeat LLM charges).
+  const needsHinglish = !hinglishText;
   const needsHindi = !hindiText;
 
   if (!needsHinglish && !needsHindi) {

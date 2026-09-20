@@ -20,6 +20,7 @@ import {
   readingModeStorageKey,
   type ReadingMode,
 } from "@/lib/reading-mode";
+import { saveReadingProgress } from "@/lib/reading-progress";
 import { BULBUL_SPEAKERS } from "@/lib/speakers";
 import type { SegmentDto, SpeakResponse } from "@/lib/types";
 
@@ -46,6 +47,7 @@ export default function Reader({ bookId }: { bookId: string }) {
   const chapter = search.get("chapter");
   const page = search.get("page");
   const modeParam = search.get("mode");
+  const segmentParam = search.get("segment");
 
   const [data, setData] = useState<SegmentsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,11 @@ export default function Reader({ bookId }: { bookId: string }) {
   const cache = useRef<Map<string, { res: SpeakResponse; fetchedAt: number }>>(new Map());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autoPlayRef = useRef(false);
+
+  useEffect(() => {
+    if (chapter || page) return;
+    router.replace(`/book/${id}`);
+  }, [bookId, chapter, page, router]);
 
   const query = useMemo(() => {
     if (chapter) return `chapter=${encodeURIComponent(chapter)}`;
@@ -93,6 +100,15 @@ export default function Reader({ bookId }: { bookId: string }) {
       cancelled = true;
     };
   }, [bookId, query, modeParam]);
+
+  useEffect(() => {
+    if (!data?.segments.length) return;
+    const idx =
+      segmentParam != null && Number.isFinite(Number(segmentParam))
+        ? Math.min(Math.max(0, Number(segmentParam)), data.segments.length - 1)
+        : 0;
+    setCurrent(idx);
+  }, [data, query, segmentParam]);
 
   const changeReadingMode = useCallback(
     (mode: ReadingMode) => {
@@ -160,6 +176,32 @@ export default function Reader({ bookId }: { bookId: string }) {
   const activeNarration = activeSegment
     ? cache.current.get(`${activeSegment.id}:${speaker}:${readingMode}`)?.res
     : undefined;
+
+  useEffect(() => {
+    if (!data || !activeSegment) return;
+    saveReadingProgress({
+      bookId,
+      segmentIndex: current,
+      playlistSize: segments.length,
+      pageNumber: activeSegment.pageNumber,
+      locateBy: chapter ? "chapter" : "page",
+      chapterIndex: chapter != null ? Number(chapter) : undefined,
+      startPage: page != null ? Number(page) : activeSegment.pageNumber,
+      chapterTitle: data.chapterTitle,
+      readingMode,
+      updatedAt: Date.now(),
+    });
+  }, [
+    bookId,
+    chapter,
+    page,
+    current,
+    readingMode,
+    data,
+    segments.length,
+    activeSegment?.pageNumber,
+    activeSegment?.id,
+  ]);
 
   /* Load (and optionally start) whatever segment is current. */
   useEffect(() => {

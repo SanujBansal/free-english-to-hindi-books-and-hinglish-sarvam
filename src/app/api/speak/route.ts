@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { parseReadingMode } from "@/lib/reading-mode";
+import { parseGlosses, parseReadingMode } from "@/lib/reading-mode";
 import { ensureSegmentVariants } from "@/lib/segment-variants";
 import { presignDownload, putObject, s3Keys } from "@/lib/s3";
 import { BULBUL_SPEAKERS, textToSpeech } from "@/lib/sarvam";
@@ -10,6 +10,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/**
+ * Narrate one segment. Caching layers:
+ * 1. Hinglish + Hindi rewrites → Postgres (`hinglishText`, `hindiText`, `hinglishGlosses`)
+ * 2. WAV audio → Neon Object Storage + `Audio` row per (segment, speaker, readingMode)
+ *
+ * Repeat visits only refresh the presigned URL — no Sarvam LLM/TTS unless something is missing.
+ */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const segmentId = String(body?.segmentId ?? "").trim();
@@ -45,21 +52,46 @@ export async function POST(req: NextRequest) {
     : segment.book.defaultSpeaker;
 
   try {
-    const { hinglishText, hindiText, glosses } = await ensureSegmentVariants(
-      segment,
-      segment.book.title,
-    );
-
-    const narrationText = mode === "hindi" ? hindiText : hinglishText;
-
-    const cached = await prisma.audio.findUnique({
+    const cachedAudio = await prisma.audio.findUnique({
       where: {
         segmentId_speaker_readingMode: { segmentId, speaker, readingMode: mode },
       },
     });
 
-    if (cached) {
-      const audioUrl = await presignDownload(cached.s3Key);
+    let hinglishText = segment.hinglishText ?? "";
+    let hindiText = segment.hindiText ?? "";
+    let glosses = parseGlosses(segment.hinglishGlosses);
+    const narrationTextForMode = () => (mode === "hindi" ? hindiText : hinglishText);
+
+    const textReady =
+      mode === "hindi" ? Boolean(hindiText) : Boolean(hinglishText);
+
+    // Fast path: stored rewrite + stored WAV — no Sarvam calls.
+    if (cachedAudio && textReady) {
+      const audioUrl = await presignDownload(cachedAudio.s3Key);
+      return NextResponse.json<SpeakResponse>({
+        segmentId,
+        audioUrl,
+        hinglishText: narrationTextForMode(),
+        sourceText: segment.sourceText,
+        speaker,
+        cached: true,
+        readingMode: mode,
+        glosses: mode === "hinglish" ? glosses : undefined,
+      });
+    }
+
+    if (!hinglishText || !hindiText) {
+      const variants = await ensureSegmentVariants(segment, segment.book.title);
+      hinglishText = variants.hinglishText;
+      hindiText = variants.hindiText;
+      glosses = variants.glosses;
+    }
+
+    const narrationText = mode === "hindi" ? hindiText : hinglishText;
+
+    if (cachedAudio) {
+      const audioUrl = await presignDownload(cachedAudio.s3Key);
       return NextResponse.json<SpeakResponse>({
         segmentId,
         audioUrl,

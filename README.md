@@ -71,13 +71,9 @@ The IAM user needs `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`,
    - `DATABASE_URL` (Neon **pooled** URL) — without this, `/api/books` returns 500/503
    - `SARVAM_API_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`
    - Neon Object Storage: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_S3_BUCKET=books`
-3. **Production schema** — once `DATABASE_URL` is set on Vercel, apply the schema to that same Neon branch (from your machine):
+3. **Production schema** — on each Vercel deploy, `build:vercel` runs `prisma db push` against `DATABASE_URL` before `next build`. Ensure **`DATABASE_URL` is set for Production (and Preview if you use it)** so the build can reach Neon.
 
-   ```bash
-   DATABASE_URL="postgresql://…" npx prisma db push
-   ```
-
-4. Redeploy. `npm run build` runs `prisma generate` so the client matches `schema.prisma`.
+4. Redeploy. Local builds use `npm run build` (no `db push`); Vercel uses `npm run build:vercel` via `vercel.json`.
 
 If the library shows an error JSON mentioning `DATABASE_URL` or schema, fix step 2 or 3 above.
 
@@ -129,12 +125,19 @@ Failing both, the whole book becomes one chapter and readers pick by page number
 
 ### The reader flow
 
-`/book/<id>/read?chapter=3` or `?page=42` loads the segment playlist. Tapping play
-posts to `/api/speak`, which:
+`/book/<id>/read?chapter=3` or `?page=42` loads the segment playlist from Postgres only
+(no Sarvam). Opening a segment calls `/api/speak`, which:
 
-1. returns a presigned URL immediately if that segment+voice is already rendered;
-2. otherwise asks sarvam-105b to rewrite the passage (cached on the segment row);
-3. sends that to bulbul:v3, stores the WAV in S3, returns the URL.
+1. **Text rewrite (Sarvam chat)** — once per segment, stored on the `Segment` row:
+   `hinglishText`, `hindiText`, and `hinglishGlosses`. Both modes are generated the first
+   time either is needed, then reused forever.
+2. **TTS (bulbul:v3)** — once per `(segment, voice, mode)`, stored as a WAV in Neon Object
+   Storage with an `Audio` row. Later requests only mint a new presigned URL (`cached: true`).
+3. Switching **Hinglish ↔ Hindi** or **voice** uses its own cached row; each combination is
+   paid for at most once per segment.
+
+The browser refetches `/api/speak` after ~45 minutes so presigned URLs stay valid; the server
+still returns cached DB + storage data without calling Sarvam again.
 
 The player prefetches the next segment while the current one plays, so there is no
 gap between paragraphs. Readers can switch voice, change speed, and reveal the
